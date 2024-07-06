@@ -13,6 +13,7 @@ export type EmoteData = {
     };
     host: {
         url: string;
+        files: Array<FileName>;
     };
 };
 
@@ -20,4 +21,13 @@ export type MappedEmote = {
     name: string;
     username: string;
     url: string;
+    fileName?: FileName
+};
+
+export type FileName = {
+    name: string;
+    static_name: string;
+    width: number;
+    height: number;
+    format: string;
 };

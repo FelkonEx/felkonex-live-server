@@ -1,20 +1,21 @@
 export type YoutubeVideoMap = {
-    id?: string;
+    videoId?: string;
     title?: string;
     thumbnailUrl?: string;
 };
 
 export type YoutubeVideoItem = {
-    kind?: string;
-    id?: {
-        videoId?: string;
-    };
     snippet?: {
         title?: string;
         thumbnails?: {
             default?: YoutubeThumbnailInfo;
             medium?: YoutubeThumbnailInfo;
             high?: YoutubeThumbnailInfo;
+            standard?: YoutubeThumbnailInfo;
+            maxres?: YoutubeThumbnailInfo;
+        };
+        resourceId?: {
+            videoId?: string;
         };
     };
 };
