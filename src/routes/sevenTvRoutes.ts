@@ -25,6 +25,7 @@ async function fetchSevenTvEmotes(all: boolean = false, resp: Response) {
             name: emote.name,
             username: emote.data.owner.username,
             url: emote.data.host.url,
+            fileName: emote.data.host.files.find((item) => item.name === "3x.webp")
         }));
 
         mappedEmotes.sort((a: MappedEmote, b: MappedEmote) => {
