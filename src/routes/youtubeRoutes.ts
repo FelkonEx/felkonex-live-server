@@ -4,9 +4,7 @@ import axios from "axios";
 
 import { YoutubeVideoItem, YoutubeVideoMap } from "types/types";
 
-const YT_CHANNEL_ID_COMPILATIONS: string = "UCKIEMpmi0mxRDIognD3Ejng"; //FelkonEx
 const YT_CHANNEL_ID_COMPILATIONS_PLAYLIST_ID: string = "UUKIEMpmi0mxRDIognD3Ejng"; //FelkonEx
-const YT_CHANNEL_ID_VODS: string = "UChC6tyjv8akwjVNdpx4-76Q"; //FelkonExArchive
 const YT_CHANNEL_ID_VODS_PLAYLIST_ID: string = "UUhC6tyjv8akwjVNdpx4-76Q";
 const YT_API_KEY: string = "AIzaSyCzR9_nR2isugtHkxzpd91s9pm_awBbzEM";
 
@@ -35,10 +33,11 @@ async function fetchYoutubeVideos(youtubeChannelId: string, resp: Response) {
             }
         );
         const videos: YoutubeVideoItem[] = response.data.items;
+
         const mappedVideos: YoutubeVideoMap[] = videos.map((video) => ({
             videoId: video.snippet?.resourceId?.videoId,
             title: decode(video.snippet?.title),
-            thumbnailUrl: video.snippet?.thumbnails?.high?.url
+            thumbnailUrl: video.snippet?.thumbnails?.maxres?.url || video.snippet?.thumbnails?.default?.url
         }));
 
         resp.send(mappedVideos);
