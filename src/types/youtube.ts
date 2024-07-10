@@ -1,18 +1,13 @@
-export type YoutubeVideoMap = {
-    videoId?: string;
-    title?: string;
-    thumbnailUrl?: string;
-};
 
-export type YoutubeVideoItem = {
+export type YoutubeApiVideoData = {
     snippet?: {
         title?: string;
         thumbnails?: {
-            default?: YoutubeThumbnailInfo;
-            medium?: YoutubeThumbnailInfo;
-            high?: YoutubeThumbnailInfo;
-            standard?: YoutubeThumbnailInfo;
-            maxres?: YoutubeThumbnailInfo;
+            default?: YoutubeApiVideoThumbnail;
+            medium?: YoutubeApiVideoThumbnail;
+            high?: YoutubeApiVideoThumbnail;
+            standard?: YoutubeApiVideoThumbnail;
+            maxres?: YoutubeApiVideoThumbnail;
         };
         resourceId?: {
             videoId?: string;
@@ -20,8 +15,14 @@ export type YoutubeVideoItem = {
     };
 };
 
-export type YoutubeThumbnailInfo = {
+export type YoutubeApiVideoThumbnail = {
     url?: string;
     width?: number;
     height?: number;
+};
+
+export type YoutubeVideoMap = {
+    videoId?: string;
+    title?: string;
+    thumbnailUrl?: string;
 };

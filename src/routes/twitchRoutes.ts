@@ -1,12 +1,11 @@
 import { Request, Response, Router } from "express";
-import { decode } from "html-entities";
 import axios from "axios";
 
-import { TwitchEmoteData, TwitchEmoteMap } from "types/types";
+import { TwitchApiEmote, TwitchEmoteMap } from "types";
 
-const CLIENT_ID: string = "u8jn1r8skjlcl1wv6botpcn70kxbr4"; //FelkonEx
-const CLIENT_SECRET: string = "i7toz4tffsifsvujint2i0hyjwfmat"; //FelkonExArchive
-const BROADCAST_ID: string = "103337867"; //FelkonExArchive
+const CLIENT_ID: string = "u8jn1r8skjlcl1wv6botpcn70kxbr4"; 
+const CLIENT_SECRET: string = "i7toz4tffsifsvujint2i0hyjwfmat"; 
+const BROADCAST_ID: string = "103337867"; //FelkonEx
 
 export const twitchRoutes = Router();
 
@@ -26,17 +25,25 @@ twitchRoutes.get("/emotes", async (req: Request<{}>, resp: Response) => {
                 },
             }
         );
-        const emoteData: TwitchEmoteData[] = response.data.data;
+        const emoteData: TwitchApiEmote[] = response.data.data;
+
+
         const mappedTwitchEmotes: TwitchEmoteMap[] = emoteData.map((emote) => ({
             name: emote.name,
-            image: emote.images?.url_4x
+            imageUrl: emote.images?.url_4x
                 ?.replace("/static/", "/default/")
                 .replace("light", "dark"),
-            emote_type: emote.emote_type,
+            emoteType: emote.emote_type,
             format: emote.format.find((element) => element === "animated")
                 ? "animated"
                 : "static",
         }));
+
+        mappedTwitchEmotes.sort((a: TwitchEmoteMap, b: TwitchEmoteMap) => {
+            if (a.name < b.name) return -1;
+            if (a.name > b.name) return 1;
+            return 0;
+        });
 
         resp.send(mappedTwitchEmotes);
     } catch (error) {
@@ -46,29 +53,6 @@ twitchRoutes.get("/emotes", async (req: Request<{}>, resp: Response) => {
         );
     }
 });
-
-// twitchRoutes.get("/oauth", async (req: Request<{}>, resp: Response) => {
-//     try {
-//         const response = await axios.post(
-//             "https://id.twitch.tv/oauth2/token",
-//             null,
-//             {
-//                 params: {
-//                     client_id: CLIENT_ID,
-//                     client_secret: CLIENT_SECRET,
-//                     grant_type: "client_credentials",
-//                     scope: "channel:read:redemptions",
-//                 },
-//             }
-//         );
-//         resp.send(response.data.access_token);
-//     } catch (error) {
-//         console.error(error);
-//         resp.status(500).send(
-//             "An error occurred while trying to fetch twitch oAuth"
-//         );
-//     }
-// });
 
 const getOauthToken = async (resp: Response): Promise<string> => {
     const response = await axios.post(

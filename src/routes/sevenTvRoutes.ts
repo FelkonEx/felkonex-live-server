@@ -1,46 +1,35 @@
 import { Request, Response, Router } from "express";
 import axios from "axios";
-
-import { Emote, MappedEmote } from "types/types";
+import { SevenTvApiEmote, SevenTvEmoteMap } from "types";
 
 const URL_7TV_EMOTE: string =
     "https://7tv.io/v3/emote-sets/614e8d416251d7e000da7c8e";
 
 export const sevenTvRoutes = Router();
 
-sevenTvRoutes.get("/emotes/all", async (req: Request<{}>, resp: Response) => {
-    fetchSevenTvEmotes(true, resp);
+sevenTvRoutes.get("/emotes", async (req: Request<{}>, resp: Response) => {
+    fetchSevenTvEmotes(resp);
 });
 
-sevenTvRoutes.get("/emotes/mine", async (req: Request<{}>, resp: Response) => {
-    fetchSevenTvEmotes(false, resp);
-});
-
-async function fetchSevenTvEmotes(all: boolean = false, resp: Response) {
+async function fetchSevenTvEmotes(resp: Response) {
     try {
         const sevenTvResp = await axios.get(URL_7TV_EMOTE);
-        const emotes: Emote[] = sevenTvResp.data.emotes;
+        const emotes: SevenTvApiEmote[] = sevenTvResp.data.emotes;
 
-        const mappedEmotes: MappedEmote[] = emotes.map((emote) => ({
+        const mappedEmotes: SevenTvEmoteMap[] = emotes.map((emote: SevenTvApiEmote) => ({
             name: emote.name,
             username: emote.data.owner.username,
             url: emote.data.host.url,
-            fileName: emote.data.host.files.find((item) => item.name === "3x.webp")
         }));
 
-        mappedEmotes.sort((a: MappedEmote, b: MappedEmote) => {
+        mappedEmotes.sort((a: SevenTvEmoteMap, b: SevenTvEmoteMap) => {
             if (a.name < b.name) return -1;
             if (a.name > b.name) return 1;
             return 0;
         });
 
-        if (all) {
-            resp.send(mappedEmotes);
-        } else {
-            resp.send(
-                mappedEmotes.filter((emote) => emote.username === "felkonex")
-            );
-        }
+        resp.send(mappedEmotes);
+
     } catch (error) {
         console.error(error);
         resp.status(500).send("An error occurred while calling the API");
