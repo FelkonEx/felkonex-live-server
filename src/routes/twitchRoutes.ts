@@ -3,8 +3,8 @@ import axios from "axios";
 
 import { TwitchApiEmote, TwitchEmoteMap } from "types";
 
-const CLIENT_ID: string = "u8jn1r8skjlcl1wv6botpcn70kxbr4"; 
-const CLIENT_SECRET: string = "i7toz4tffsifsvujint2i0hyjwfmat"; 
+const CLIENT_ID: string = "u8jn1r8skjlcl1wv6botpcn70kxbr4";
+const CLIENT_SECRET: string = "i7toz4tffsifsvujint2i0hyjwfmat";
 const BROADCAST_ID: string = "103337867"; //FelkonEx
 
 export const twitchRoutes = Router();
@@ -17,16 +17,15 @@ twitchRoutes.get("/emotes", async (req: Request<{}>, resp: Response) => {
             "https://api.twitch.tv/helix/chat/emotes",
             {
                 params: {
-                    broadcaster_id: BROADCAST_ID,
+                    broadcaster_id: BROADCAST_ID
                 },
                 headers: {
                     Authorization: "Bearer " + bearerToken,
-                    "Client-Id": CLIENT_ID,
-                },
+                    "Client-Id": CLIENT_ID
+                }
             }
         );
         const emoteData: TwitchApiEmote[] = response.data.data;
-
 
         const mappedTwitchEmotes: TwitchEmoteMap[] = emoteData.map((emote) => ({
             name: emote.name,
@@ -36,7 +35,7 @@ twitchRoutes.get("/emotes", async (req: Request<{}>, resp: Response) => {
             emoteType: emote.emote_type,
             format: emote.format.find((element) => element === "animated")
                 ? "animated"
-                : "static",
+                : "static"
         }));
 
         mappedTwitchEmotes.sort((a: TwitchEmoteMap, b: TwitchEmoteMap) => {
@@ -63,8 +62,8 @@ const getOauthToken = async (resp: Response): Promise<string> => {
                 client_id: CLIENT_ID,
                 client_secret: CLIENT_SECRET,
                 grant_type: "client_credentials",
-                scope: "channel:read:redemptions",
-            },
+                scope: "channel:read:redemptions"
+            }
         }
     );
 

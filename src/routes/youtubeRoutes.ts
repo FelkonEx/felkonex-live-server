@@ -1,64 +1,165 @@
 import { Request, Response, Router } from "express";
-import { decode } from "html-entities";
 import axios from "axios";
+import { QueryResult } from "pg";
+import { decode } from "html-entities";
 
-import { YoutubeApiVideoData, YoutubeVideoMap } from "types";
+import {
+    YoutubeApiVideoData,
+    YoutubeVideoDto,
+    YoutubeApiVideoThumbnailObj,
+    YoutubeVideoEntity
+} from "types";
 
-const YT_CHANNEL_ID_COMPILATIONS_PLAYLIST_ID: string =
-    "UUKIEMpmi0mxRDIognD3Ejng"; //FelkonEx
-const YT_CHANNEL_ID_VODS_PLAYLIST_ID: string = "UUhC6tyjv8akwjVNdpx4-76Q"; //FelkonExArchive
-const YT_API_KEY: string = "AIzaSyCzR9_nR2isugtHkxzpd91s9pm_awBbzEM";
+import pool from "../db/db";
+import { youtube, sql } from "../utils";
+
+import { DB_TABLE_NAME_HIGHLIGHTS, DB_TABLE_NAME_STREAMS } from "../config";
 
 export const youtubeRoutes = Router();
 
 youtubeRoutes.get("/compilations", async (req: Request<{}>, resp: Response) => {
-    fetchYoutubeVideos(YT_CHANNEL_ID_COMPILATIONS_PLAYLIST_ID, resp);
-});
-
-youtubeRoutes.get("/vods", async (req: Request<{}>, resp: Response) => {
-    fetchYoutubeVideos(YT_CHANNEL_ID_VODS_PLAYLIST_ID, resp);
-});
-
-async function fetchYoutubeVideos(youtubeChannelId: string, resp: Response) {
     try {
-        const response = await axios.get(
-            "https://www.googleapis.com/youtube/v3/playlistItems",
-            {
-                params: {
-                    part: "snippet",
-                    maxResults: 50,
-                    key: YT_API_KEY,
-                    playlistId: youtubeChannelId,
-                    order: "date",
-                },
-            }
-        );
-        const videos: YoutubeApiVideoData[] = response.data.items;
-
-        const mappedVideos: YoutubeVideoMap[] = videos.map(
-            (video: YoutubeApiVideoData) => ({
-                videoId: video.snippet?.resourceId?.videoId,
-                title: decode(video.snippet?.title),
-                thumbnailUrl: returnThumbnailUrl(video),
-            })
-        );
-
-        resp.send(mappedVideos);
+        const returnedVideos: QueryResult<YoutubeVideoEntity> =
+            await pool.query(
+                sql.SELECT_VIDEOS_QUERY.replace("{0}", DB_TABLE_NAME_HIGHLIGHTS)
+            );
+        const videoDto: Array<YoutubeVideoEntity> = returnedVideos.rows;
+        resp.send(mapVideoEntityToDto(videoDto));
     } catch (error) {
         console.error(error);
         resp.status(500).send(
             "An error occurred while trying to fetch data from YouTube API"
         );
     }
+});
+
+youtubeRoutes.get("/vods", async (req: Request<{}>, resp: Response) => {
+    try {
+        const returnedVideos: QueryResult<YoutubeVideoEntity> =
+            await pool.query(
+                sql.SELECT_VIDEOS_QUERY.replace("{0}", DB_TABLE_NAME_STREAMS)
+            );
+
+        const videoDto: Array<YoutubeVideoEntity> = returnedVideos.rows;
+
+        resp.send(mapVideoEntityToDto(videoDto));
+    } catch (error) {
+        console.error(error);
+        resp.status(500).send(
+            "An error occurred while trying to fetch data from YouTube API"
+        );
+    }
+});
+
+youtubeRoutes.post("/vods", async (req: Request<{}>, resp: Response) => {
+    try {
+        const mappedVideos: Array<YoutubeVideoDto> = await fetchYtVideos(
+            youtube.CHANNEL_ID_VODS
+        );
+
+        mappedVideos.forEach(async (video) => {
+            await pool.query(
+                sql.INSERT_VIDEO_QUERY.replace("{0}", DB_TABLE_NAME_STREAMS),
+                [
+                    video.videoId,
+                    video.thumbnailUrl,
+                    video.title,
+                    video.publishedAt
+                ]
+            );
+        });
+        resp.sendStatus(200);
+    } catch {
+        resp.status(500).send(
+            "An error occurred while trying to update youtube compilations"
+        );
+    }
+});
+
+youtubeRoutes.post(
+    "/compilations",
+    async (req: Request<{}>, resp: Response) => {
+        try {
+            const mappedVideos: Array<YoutubeVideoDto> = await fetchYtVideos(
+                youtube.CHANNEL_ID_COMPILATIONS
+            );
+            mappedVideos.forEach(async (video) => {
+                await pool.query(
+                    sql.INSERT_VIDEO_QUERY.replace(
+                        "{0}",
+                        DB_TABLE_NAME_HIGHLIGHTS
+                    ),
+                    [
+                        video.videoId,
+                        video.thumbnailUrl,
+                        video.title,
+                        video.publishedAt
+                    ]
+                );
+            });
+            resp.sendStatus(200);
+        } catch {
+            resp.status(500).send(
+                "An error occurred while trying to update youtube compilations"
+            );
+        }
+    }
+);
+
+// --- API Call
+
+async function fetchYtVideos(
+    youtubeChannelId: string
+): Promise<YoutubeVideoDto[]> {
+    const response = await axios.get(
+        "https://www.googleapis.com/youtube/v3/playlistItems",
+        {
+            params: {
+                part: "snippet",
+                maxResults: 50,
+                key: process.env.API_KEY_YT,
+                playlistId: youtubeChannelId,
+                order: "date"
+            }
+        }
+    );
+    const videos: YoutubeApiVideoData[] = response.data.items;
+
+    const mappedVideos: YoutubeVideoDto[] = videos.map(
+        (video: YoutubeApiVideoData) => ({
+            videoId: video.snippet?.resourceId?.videoId,
+            title: decode(video.snippet?.title),
+            thumbnailUrl: returnThumbnailUrl(video),
+            publishedAt: video.snippet?.publishedAt
+        })
+    );
+    return mappedVideos;
+}
+
+// --- Util Functions
+
+function mapVideoEntityToDto(
+    videos: Array<YoutubeVideoEntity>
+): Array<YoutubeVideoDto> {
+    return videos.map((field: YoutubeVideoEntity) => ({
+        videoId: field.video_id,
+        title: field.title,
+        thumbnailUrl: field.thumbnail_url,
+        publishedAt: field.published_at
+    }));
 }
 
 function returnThumbnailUrl(video: YoutubeApiVideoData) {
+    if (!video.snippet?.thumbnails) {
+        return "";
+    }
+    const thumbnails: YoutubeApiVideoThumbnailObj = video.snippet?.thumbnails;
+
     return (
-        video.snippet?.thumbnails?.maxres?.url ||
-        video.snippet?.thumbnails?.standard?.url ||
-        video.snippet?.thumbnails?.high?.url ||
-        video.snippet?.thumbnails?.medium?.url ||
-        video.snippet?.thumbnails?.default?.url ||
-        ""
+        thumbnails.maxres?.url ||
+        thumbnails.standard?.url ||
+        thumbnails.high?.url ||
+        thumbnails.medium?.url ||
+        thumbnails.default?.url
     );
 }

@@ -13,7 +13,12 @@ export interface SevenTvApiEmoteData {
     };
     host: {
         url: string;
+        files: Array<SevenTvApiFileData>;
     };
+}
+
+export interface SevenTvApiFileData {
+    name: string;
 }
 
 export interface SevenTvEmoteMap {

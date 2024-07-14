@@ -16,11 +16,17 @@ async function fetchSevenTvEmotes(resp: Response) {
         const sevenTvResp = await axios.get(URL_7TV_EMOTE);
         const emotes: SevenTvApiEmote[] = sevenTvResp.data.emotes;
 
-        const mappedEmotes: SevenTvEmoteMap[] = emotes.map((emote: SevenTvApiEmote) => ({
-            name: emote.name,
-            username: emote.data.owner.username,
-            url: emote.data.host.url,
-        }));
+        const mappedEmotes: SevenTvEmoteMap[] = emotes.map(
+            (emote: SevenTvApiEmote) => ({
+                name: emote.name,
+                username: emote.data.owner.username,
+                url:
+                    "https:" +
+                    emote.data.host.url +
+                    "/" +
+                    emote.data.host.files.at(-1)?.name
+            })
+        );
 
         mappedEmotes.sort((a: SevenTvEmoteMap, b: SevenTvEmoteMap) => {
             if (a.name < b.name) return -1;
@@ -29,7 +35,6 @@ async function fetchSevenTvEmotes(resp: Response) {
         });
 
         resp.send(mappedEmotes);
-
     } catch (error) {
         console.error(error);
         resp.status(500).send("An error occurred while calling the API");
