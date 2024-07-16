@@ -1,14 +1,11 @@
-import { CHANNEL_ID_COMPILATIONS, CHANNEL_ID_VODS } from "./constants/youtube";
-import { INSERT_VIDEO_QUERY, SELECT_VIDEOS_QUERY } from "./constants/sql";
+import * as youtube from "./constants/youtube";
+import * as sql from "./constants/sql";
+import * as url from "./constants/url";
 
-const sql = {
-    INSERT_VIDEO_QUERY,
-    SELECT_VIDEOS_QUERY
+const constants = {
+    youtube,
+    sql,
+    url
 };
 
-const youtube = {
-    CHANNEL_ID_COMPILATIONS,
-    CHANNEL_ID_VODS
-};
-
-export { sql, youtube };
+export { constants };

@@ -11,9 +11,8 @@ import {
 } from "types";
 
 import pool from "../db/db";
-import { youtube, sql } from "../utils";
-
 import { DB_TABLE_NAME_HIGHLIGHTS, DB_TABLE_NAME_STREAMS } from "../config";
+import { constants } from "../utils";
 
 export const youtubeRoutes = Router();
 
@@ -21,7 +20,10 @@ youtubeRoutes.get("/compilations", async (req: Request<{}>, resp: Response) => {
     try {
         const returnedVideos: QueryResult<YoutubeVideoEntity> =
             await pool.query(
-                sql.SELECT_VIDEOS_QUERY.replace("{0}", DB_TABLE_NAME_HIGHLIGHTS)
+                constants.sql.SELECT_VIDEOS_QUERY.replace(
+                    "{0}",
+                    DB_TABLE_NAME_HIGHLIGHTS
+                )
             );
         const videoDto: Array<YoutubeVideoEntity> = returnedVideos.rows;
         resp.send(mapVideoEntityToDto(videoDto));
@@ -37,7 +39,10 @@ youtubeRoutes.get("/vods", async (req: Request<{}>, resp: Response) => {
     try {
         const returnedVideos: QueryResult<YoutubeVideoEntity> =
             await pool.query(
-                sql.SELECT_VIDEOS_QUERY.replace("{0}", DB_TABLE_NAME_STREAMS)
+                constants.sql.SELECT_VIDEOS_QUERY.replace(
+                    "{0}",
+                    DB_TABLE_NAME_STREAMS
+                )
             );
 
         const videoDto: Array<YoutubeVideoEntity> = returnedVideos.rows;
@@ -54,12 +59,15 @@ youtubeRoutes.get("/vods", async (req: Request<{}>, resp: Response) => {
 youtubeRoutes.post("/vods", async (req: Request<{}>, resp: Response) => {
     try {
         const mappedVideos: Array<YoutubeVideoDto> = await fetchYtVideos(
-            youtube.CHANNEL_ID_VODS
+            constants.youtube.CHANNEL_ID_VODS
         );
 
         mappedVideos.forEach(async (video) => {
             await pool.query(
-                sql.INSERT_VIDEO_QUERY.replace("{0}", DB_TABLE_NAME_STREAMS),
+                constants.sql.INSERT_VIDEO_QUERY.replace(
+                    "{0}",
+                    DB_TABLE_NAME_STREAMS
+                ),
                 [
                     video.videoId,
                     video.thumbnailUrl,
@@ -81,11 +89,11 @@ youtubeRoutes.post(
     async (req: Request<{}>, resp: Response) => {
         try {
             const mappedVideos: Array<YoutubeVideoDto> = await fetchYtVideos(
-                youtube.CHANNEL_ID_COMPILATIONS
+                constants.youtube.CHANNEL_ID_COMPILATIONS
             );
             mappedVideos.forEach(async (video) => {
                 await pool.query(
-                    sql.INSERT_VIDEO_QUERY.replace(
+                    constants.sql.INSERT_VIDEO_QUERY.replace(
                         "{0}",
                         DB_TABLE_NAME_HIGHLIGHTS
                     ),
@@ -111,18 +119,15 @@ youtubeRoutes.post(
 async function fetchYtVideos(
     youtubeChannelId: string
 ): Promise<YoutubeVideoDto[]> {
-    const response = await axios.get(
-        "https://www.googleapis.com/youtube/v3/playlistItems",
-        {
-            params: {
-                part: "snippet",
-                maxResults: 50,
-                key: process.env.API_KEY_YT,
-                playlistId: youtubeChannelId,
-                order: "date"
-            }
+    const response = await axios.get(constants.url.API_YOUTUBE_PLAYLIST_ITEMS, {
+        params: {
+            part: "snippet",
+            maxResults: 50,
+            key: process.env.API_KEY_YT,
+            playlistId: youtubeChannelId,
+            order: "date"
         }
-    );
+    });
     const videos: YoutubeApiVideoData[] = response.data.items;
 
     const mappedVideos: YoutubeVideoDto[] = videos.map(
@@ -138,16 +143,13 @@ async function fetchYtVideos(
 
 // --- Util Functions
 
-function mapVideoEntityToDto(
-    videos: Array<YoutubeVideoEntity>
-): Array<YoutubeVideoDto> {
-    return videos.map((field: YoutubeVideoEntity) => ({
+const mapVideoEntityToDto = (videos: Array<YoutubeVideoEntity>) =>
+    videos.map((field: YoutubeVideoEntity) => ({
         videoId: field.video_id,
         title: field.title,
         thumbnailUrl: field.thumbnail_url,
         publishedAt: field.published_at
     }));
-}
 
 function returnThumbnailUrl(video: YoutubeApiVideoData) {
     if (!video.snippet?.thumbnails) {
